@@ -1,0 +1,69 @@
+package org.bezina.sec09;
+
+import org.bezina.sec09.controller.DocumentController;
+import org.bezina.sec09.security.scopedvalue.AuthenticationService;
+import org.bezina.sec09.security.threadlocal.SecurityContextHolder;
+import org.bezina.utils.CommonUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.time.Duration;
+import java.util.UUID;
+
+
+public class Lec05ScopedValueAssignment {
+    private static final Logger log = LoggerFactory.getLogger(Lec05ScopedValueAssignment.class);
+    private static final ScopedValue<String> SESSION_TOKEN = ScopedValue.newInstance();
+
+    static void main(String[] args) {
+
+        Thread.ofVirtual().name("VT-1").start(() -> authFilter(() -> orderController()));
+        Thread.ofVirtual().name("VT-2").start(() -> authFilter(() -> orderController()));
+
+        CommonUtils.sleep(Duration.ofSeconds(1));
+
+
+    }
+
+    // below code is just to demonstrate the workflow
+    // WebFilter
+    private static void authFilter(Runnable runnable){
+        ScopedValue.where(SESSION_TOKEN, authenticate())
+                .run(runnable); // the value is set and removed automaticaly
+
+    }
+
+    // Security
+    private static String authenticate(){
+        var token = UUID.randomUUID().toString();
+        log.info("token={}", token);
+        return token;
+    }
+
+    // @Principal
+    // POST /orders
+    private static void orderController(){
+        log.info("orderController: {}", SESSION_TOKEN.get());
+        ScopedValue.where(SESSION_TOKEN, "session1")
+                   .run(()->callProductService());
+        ;
+
+        orderService();
+    }
+
+    private static void orderService(){
+        log.info("orderService: {}", SESSION_TOKEN.get());
+        callProductService();
+        callInventoryService();
+    }
+
+    // This is a client to call product service
+    private static void callProductService(){
+        log.info("calling product-service with header. Authorization: Bearer {}", SESSION_TOKEN.get());
+    }
+
+    // This is a client to call inventory service
+    private static void callInventoryService(){
+        log.info("calling inventory-service with header. Authorization: Bearer {}", SESSION_TOKEN.get());
+    }
+}
