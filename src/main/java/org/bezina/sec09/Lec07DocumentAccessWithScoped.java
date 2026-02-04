@@ -12,9 +12,10 @@ public class Lec07DocumentAccessWithScoped {
 
     static void main() {
 
-        Thread.ofVirtual().name("admin").start(() -> documentAccessWorkflow(1, "password"));
+   /*     Thread.ofVirtual().name("admin").start(() -> documentAccessWorkflow(1, "password"));
         Thread.ofVirtual().name("editor").start(() -> documentAccessWorkflow(2, "password"));
-
+*/
+        documentAccessWorkflow(3,"password");
         CommonUtils.sleep(Duration.ofSeconds(1));
 
     }
@@ -22,8 +23,13 @@ public class Lec07DocumentAccessWithScoped {
     private static void documentAccessWorkflow(Integer userId, String password){
         AuthenticationService.loginAndExecute(userId, password, () -> {
             documentController.read();
-            documentController.edit();
-            documentController.delete();
+            AuthenticationService.runAsAdmin(() ->{
+                documentController.edit();
+                documentController.delete();
+            });
+       //     documentController.edit();
+           documentController.delete();
+
         });
     }
 
